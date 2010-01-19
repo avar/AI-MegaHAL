@@ -150,7 +150,7 @@ Craig Andrews
 #define COMMAND_SIZE (sizeof(command)/sizeof(command[0]))
 
 #define BYTE1 unsigned char
-#define BYTE2 unsigned short
+#define BYTE2 unsigned int
 #define BYTE4 unsigned long
 
 #ifdef __mac_os
