@@ -325,6 +325,8 @@ static void save_model(char *, MODEL *);
 static char *strdup(const char *);
 #endif
 static void upper(char *);
+static void upper_utf8(char *, unsigned int);
+static void lower_utf8(char *, unsigned int);
 static void write_input(char *);
 static void write_output(char *);
 #if defined(DOS) || defined(__mac_os)
@@ -944,9 +946,18 @@ void capitalize(char *string)
     bool start=TRUE;
 
     for(i=0; i<(int)strlen(string); ++i) {
+        if (start == TRUE) {
+            upper_utf8(string, i);
+            start = FALSE;
+        } else {
+            lower_utf8(string, i);
+        }
+
 	if(isalpha(string[i])) {
-	    if(start==TRUE) string[i]=(char)toupper((int)string[i]);
-	    else string[i]=(char)tolower((int)string[i]);
+	    if (start==TRUE)
+            string[i]=(char)toupper((int)string[i]);
+	    else
+            string[i]=(char)tolower((int)string[i]);
 	    start=FALSE;
 	}
 	if((i>2)&&(strchr("!.?", string[i-1])!=NULL)&&(isspace(string[i])))
@@ -965,7 +976,48 @@ void upper(char *string)
 {
     unsigned int i;
 
-    for(i=0; i<(int)strlen(string); ++i) string[i]=(char)toupper((int)string[i]);
+    for(i=0; i<(int)strlen(string); ++i) {
+        upper_utf8(string, i);
+        string[i]=(char)toupper((int)string[i]);
+    }
+}
+
+void upper_utf8(char *string, unsigned int i)
+{
+    int length = strlen(string);
+
+    if (string[i] == '\xc3' && i+1 < length) {
+        // Upper case Icelandic letters:
+        // for i in {0..9}; do perl -CAO -E 'my @l = split //, $ARGV[0]; say for $l[$ARGV[1]], uc $l[$ARGV[1]]' áðéíóúýþæö $i |hexdump -C; done
+        if (string[i+1] == '\xa1') string[i+1] = '\x81'; // á -> Á
+        if (string[i+1] == '\xb0') string[i+1] = '\x90'; // ð -> Ð
+        if (string[i+1] == '\xa9') string[i+1] = '\x89'; // é -> É
+        if (string[i+1] == '\xad') string[i+1] = '\x8d'; // í -> Í
+        if (string[i+1] == '\xb3') string[i+1] = '\x93'; // ó -> Ó
+        if (string[i+1] == '\xba') string[i+1] = '\x9a'; // ú -> Ú
+        if (string[i+1] == '\xbd') string[i+1] = '\x9d'; // ý -> Ý
+        if (string[i+1] == '\xbe') string[i+1] = '\x9e'; // þ -> Þ
+        if (string[i+1] == '\xa6') string[i+1] = '\x86'; // æ -> Æ
+        if (string[i+1] == '\xb6') string[i+1] = '\x96'; // ö -> Ö
+    }
+}
+
+void lower_utf8(char *string, unsigned int i)
+{
+    int length = strlen(string);
+
+    if (string[i] == '\xc3' && i+1 < (int)strlen(string)) {
+        if (string[i+1] == '\x81') string[i+1] = '\xa1'; // Á -> á
+        if (string[i+1] == '\x90') string[i+1] = '\xb0'; // Ð -> ð
+        if (string[i+1] == '\x89') string[i+1] = '\xa9'; // É -> é
+        if (string[i+1] == '\x8d') string[i+1] = '\xad'; // Í -> í
+        if (string[i+1] == '\x93') string[i+1] = '\xb3'; // Ó -> ó
+        if (string[i+1] == '\x9a') string[i+1] = '\xba'; // Ú -> ú
+        if (string[i+1] == '\x9d') string[i+1] = '\xbd'; // Ý -> ý
+        if (string[i+1] == '\x9e') string[i+1] = '\xbe'; // Þ -> þ
+        if (string[i+1] == '\x86') string[i+1] = '\xa6'; // Æ -> æ
+        if (string[i+1] == '\x96') string[i+1] = '\xb6'; // Ö -> ö
+    }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -2032,6 +2084,11 @@ fail:
 void make_words(char *input, DICTIONARY *words)
 {
     int offset=0;
+#if DEBUG
+    char *tmp = NULL;
+    int i;
+    printf("Turned string <<%s>> into words: ", input);
+#endif
 
     /*
      *		Clear the entries in the dictionary
@@ -2102,6 +2159,19 @@ void make_words(char *input, DICTIONARY *words)
 	words->entry[words->size-1].word=".";
     }
 
+#if DEBUG
+    /* Debug */
+    for(i=0; i<words->size; ++i) {
+        tmp=strndup(words->entry[i].word, words->entry[i].length);
+        if(tmp==NULL) {
+            error("make_words", "Unable to allocate output");
+        }
+        printf(", <<%s>>", tmp);
+        free(tmp);
+    }
+    printf("\n");
+#endif
+
     return;
 }
 
@@ -2122,28 +2192,28 @@ bool boundary(char *string, int position)
 
     if(
 	(string[position]=='\'')&&
-	(isalpha(string[position-1])!=0)&&
-	(isalpha(string[position+1])!=0)
+	(!isspace(string[position-1])!=0)&&
+	(!isspace(string[position+1])!=0)
 	)
 	return(FALSE);
 
     if(
 	(position>1)&&
 	(string[position-1]=='\'')&&
-	(isalpha(string[position-2])!=0)&&
-	(isalpha(string[position])!=0)
+	(!isspace(string[position-2])!=0)&&
+	(!isspace(string[position])!=0)
 	)
 	return(FALSE);
 
     if(
-	(isalpha(string[position])!=0)&&
-	(isalpha(string[position-1])==0)
+	(!isspace(string[position])!=0)&&
+	(!isspace(string[position-1])==0)
 	)
 	return(TRUE);
 
     if(
-	(isalpha(string[position])==0)&&
-	(isalpha(string[position-1])!=0)
+	(!isspace(string[position])==0)&&
+	(!isspace(string[position-1])!=0)
 	)
 	return(TRUE);
 
