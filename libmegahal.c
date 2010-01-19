@@ -1565,10 +1565,8 @@ TREE *add_symbol(TREE *tree, BYTE2 symbol)
     /*
      *		Increment the symbol counts
      */
-    if((node->count<65535)) {
 	node->count+=1;
 	tree->usage+=1;
-    }
 
     return(node);
 }
