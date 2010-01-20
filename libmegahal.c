@@ -946,6 +946,14 @@ void capitalize(char *string)
     bool start=TRUE;
 
     for(i=0; i<(int)strlen(string); ++i) {
+        if(isalpha(string[i])) {
+            if (start==TRUE)
+                string[i]=(char)toupper((int)string[i]);
+            else
+                string[i]=(char)tolower((int)string[i]);
+            start=FALSE;
+        }
+
         if (start == TRUE) {
             upper_utf8(string, i);
             start = FALSE;
@@ -953,15 +961,8 @@ void capitalize(char *string)
             lower_utf8(string, i);
         }
 
-	if(isalpha(string[i])) {
-	    if (start==TRUE)
-            string[i]=(char)toupper((int)string[i]);
-	    else
-            string[i]=(char)tolower((int)string[i]);
-	    start=FALSE;
-	}
-	if((i>2)&&(strchr("!.?", string[i-1])!=NULL)&&(isspace(string[i])))
-	    start=TRUE;
+        if((i>2)&&(strchr("!.?", string[i-1])!=NULL)&&(isspace(string[i])))
+            start=TRUE;
     }
 }
 
