@@ -2209,6 +2209,7 @@ bool boundary(char *string, int position)
     if(
 	(!isspace(string[position])!=0)&&
 	(!isspace(string[position-1])==0)
+    || (strchr("!.?,", string[position]) != NULL)
 	)
 	return(TRUE);
 
